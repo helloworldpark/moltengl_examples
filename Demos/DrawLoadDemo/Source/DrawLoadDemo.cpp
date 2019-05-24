@@ -99,9 +99,6 @@ public:
 	// Shader ids
 	GLuint m_uiSimpleVertShader;
 	GLuint m_uiSimpleFragShader;
-    
-    GLuint m_uiTestVertShader;
-    GLuint m_uiTestFragShader;
 
 	CPVRTModelPOD m_Scene;
 	Mesh m_SphereMesh;
