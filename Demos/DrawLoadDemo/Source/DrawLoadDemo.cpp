@@ -81,14 +81,6 @@ const Sphere g_caSpheres[] =
 };
 const unsigned int g_cuiNumSpheres = sizeof(g_caSpheres) / sizeof(g_caSpheres[0]);
 
-// Added by Sean Park
-typedef struct {
-    void* data;
-    GLuint width;
-    GLuint height;
-    GLuint bpp;
-} PixelBuffer;
-
 /*!****************************************************************************
  Class implementing the PVRShell functions.
 ******************************************************************************/
@@ -122,9 +114,6 @@ public:
 		GLint iColorLoc;
 	}
 	m_SimpleShaderProgram;
-    
-    PixelBuffer m_pixels; // Added by Sean Park
-    
 
 public:
 	
@@ -136,12 +125,11 @@ public:
 	
 	bool LoadVbos(CPVRTString* const pErrorStr);
 	bool LoadShaders(CPVRTString* const pErrorStr);
-    bool LoadPixelBuffers(CPVRTString* const pErrorStr); // Added by Sean Park
 	float UpdateFramerateCounter();
 
 	void HandleInput();
 	
-	void RenderFloor(PVRTMat4& testMatrix);
+	void RenderFloor();
 	void RenderSphere(PVRTVec3 position, float radius);
 	void RenderParticles();
 
@@ -213,28 +201,6 @@ bool DrawLoadDemo::LoadShaders(CPVRTString* const pErrorStr)
 	m_SimpleShaderProgram.iColorLoc = glGetUniformLocation(m_SimpleShaderProgram.uiId, "uColor");
 
 	return true;
-}
-
-/*!****************************************************************************
- @Function        LoadPixelBuffers
- @Return        bool        true if no error occured
- @Description    Code in LoadPixelBuffers() will be called on initialization.
- This method allocates memory from heap, so deallocation must be performed on
- termination of the rendering.
- ******************************************************************************/
-bool DrawLoadDemo::LoadPixelBuffers(CPVRTString* const pErrorStr)
-{
-    GLsizei width = PVRShellGet(prefWidth);
-    GLsizei height = PVRShellGet(prefHeight);
-    
-    PixelBuffer buf;
-    buf.bpp = 4;
-    buf.width = width;
-    buf.height = height;
-    buf.data = (unsigned char*)calloc(buf.bpp * buf.width * buf.height, sizeof(unsigned char));
-    m_pixels = buf;
-    
-    return true;
 }
 
 /*!****************************************************************************
@@ -326,11 +292,6 @@ bool DrawLoadDemo::InitView()
 		PVRShellSet(prefExitMessage, ErrorStr.c_str());
 		return false;
 	}
-    
-    if (!LoadPixelBuffers(&ErrorStr))
-    {
-        return false;
-    }
 
 	// Creates the projection matrix.
 	m_mProjection = PVRTMat4::PerspectiveFovRH(PVRT_PI / 3.0f, (float)PVRShellGet(prefWidth)/(float)PVRShellGet(prefHeight), g_fCameraNear, g_fCameraFar, PVRTMat4::OGL, bRotate);
@@ -351,7 +312,7 @@ bool DrawLoadDemo::InitView()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Enable culling
-    glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	return true;
 }
 
@@ -372,10 +333,6 @@ bool DrawLoadDemo::ReleaseView()
 	// Release buffers
 	glDeleteBuffers(1, &m_uiVbo);
 	glDeleteBuffers(1, &m_uiIbo);
-    
-    if (m_pixels.data) {
-        free(m_pixels.data);
-    }
 	
 	// Release Print3D Textures
 	m_Print3D.ReleaseTextures();
@@ -399,7 +356,6 @@ bool DrawLoadDemo::RenderScene()
 	UpdateParticles();
 
 	float time_delta = PVRShellGetTime() / 10000.0f;
-//    time_delta = 0;
 	PVRTVec3 vFrom = PVRTVec3((float) sin(time_delta) * 50.0f, 30.0f, (float) cos(time_delta) * 50.0f);
 	m_mView = PVRTMat4::LookAtRH(vFrom, PVRTVec3(0.0f, 5.0f, 0.0f), PVRTVec3(0.0f, 1.0f, 0.0f));
 	m_mViewProjection = m_mProjection * m_mView;
@@ -410,34 +366,23 @@ bool DrawLoadDemo::RenderScene()
 
 	// Enables depth testing
 	glEnable(GL_DEPTH_TEST);
-    
-    // Render floor
-    RenderFloor(m_mViewProjection);
-    
-    // Render spheres
-    for (unsigned int i=0; i < g_cuiNumSpheres; i++) {
-        RenderSphere(g_caSpheres[i].aPosition, g_caSpheres[i].fRadius);
-    }
-    
-    // Render particles
-    RenderParticles();
-    
-    // Added by Sean Park
-    // Performing test: to read pixel or not
-    // Current problem: rendering is going wrong when calling glReadPixels(set doTest to true)
-    // Causes suspected: I think there is a bug when sharing a shader program,
-    //                   that shader buffer is improperly shared between different render calls.
-    bool doTest = true;
-    if (doTest) {
-        glReadPixels(0, 0, m_pixels.width, m_pixels.height, GL_RGBA, GL_UNSIGNED_BYTE, m_pixels.data);
-    }
-    
+
+	// Render floor
+	RenderFloor();
+
+	for (unsigned int i=0; i < g_cuiNumSpheres; i++) {
+		RenderSphere(g_caSpheres[i].aPosition, g_caSpheres[i].fRadius);
+	}
+
+	// Render particles
+	RenderParticles();
+
 	// Display info text.
-    unsigned int numDrawCalls = m_pParticleSystem->GetNumberOfParticles() + g_cuiNumSpheres + 1;
-    DisplayTitle("DrawLoad");
-    m_Print3D.Print3D(2.0f, 90.0f, 0.5f, 0xFFFFFFFF, "Draws: %d | Triangles per: %d | Triangles total: %d | FPS: %d",
-                      numDrawCalls, MGL_DEMO_POLY_SIZE, (MGL_DEMO_POLY_SIZE * numDrawCalls), m_fps);
-    m_Print3D.Flush();
+	unsigned int numDrawCalls = m_pParticleSystem->GetNumberOfParticles() + g_cuiNumSpheres + 1;
+	DisplayTitle("DrawLoad");
+	m_Print3D.Print3D(2.0f, 90.0f, 0.5f, 0xFFFFFFFF, "Draws: %d | Triangles per: %d | Triangles total: %d | FPS: %d",
+					  numDrawCalls, MGL_DEMO_POLY_SIZE, (MGL_DEMO_POLY_SIZE * numDrawCalls), m_fps);
+	m_Print3D.Flush();
 	
 	return true;
 }
@@ -465,8 +410,8 @@ void DrawLoadDemo::RenderSphere(PVRTVec3 position, float radius)
 	glUniform4fv(m_SimpleShaderProgram.iColorLoc, 1, &color.x);
 
 	// Enable vertex arributes
-    glEnableVertexAttribArray(VERTEX_ARRAY);
-    glEnableVertexAttribArray(NORMAL_ARRAY);
+	glEnableVertexAttribArray(VERTEX_ARRAY);
+	glEnableVertexAttribArray(NORMAL_ARRAY);
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_uiVbo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_uiIbo);
@@ -479,8 +424,8 @@ void DrawLoadDemo::RenderSphere(PVRTVec3 position, float radius)
 	glDrawElements(GL_TRIANGLES, pMesh->nNumFaces*3, GL_UNSIGNED_SHORT, 0);
 
 	// Safely disable the vertex attribute arrays
-    glDisableVertexAttribArray(VERTEX_ARRAY);
-    glDisableVertexAttribArray(NORMAL_ARRAY);
+	glDisableVertexAttribArray(VERTEX_ARRAY);
+	glDisableVertexAttribArray(NORMAL_ARRAY);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -490,12 +435,12 @@ void DrawLoadDemo::RenderSphere(PVRTVec3 position, float radius)
  @Function		RenderFloor
  @Description	Renders the floor as a quad.
 ******************************************************************************/
-void DrawLoadDemo::RenderFloor(PVRTMat4& testMatrix)
+void DrawLoadDemo::RenderFloor()
 {
-    glUseProgram(m_SimpleShaderProgram.uiId);
+	glUseProgram(m_SimpleShaderProgram.uiId);
 
 	PVRTMat3 mViewIT(m_mView.inverse().transpose());
-	glUniformMatrix4fv(m_SimpleShaderProgram.iModelViewProjectionMatrixLoc, 1, GL_FALSE, testMatrix.f);
+	glUniformMatrix4fv(m_SimpleShaderProgram.iModelViewProjectionMatrixLoc, 1, GL_FALSE, m_mViewProjection.f);
 	glUniformMatrix4fv(m_SimpleShaderProgram.iModelViewMatrixLoc, 1, GL_FALSE, m_mView.f);
 	glUniformMatrix3fv(m_SimpleShaderProgram.iModelViewITMatrixLoc, 1, GL_FALSE, mViewIT.f);
 
@@ -506,8 +451,8 @@ void DrawLoadDemo::RenderFloor(PVRTMat4& testMatrix)
 	glUniform4fv(m_SimpleShaderProgram.iColorLoc, 1, &color.x);
 
 	// Enable vertex arributes
-    glEnableVertexAttribArray(VERTEX_ARRAY);
-    glEnableVertexAttribArray(NORMAL_ARRAY);
+	glEnableVertexAttribArray(VERTEX_ARRAY);
+	glEnableVertexAttribArray(NORMAL_ARRAY);
 
 	PVRTVec2 minCorner(-100.0f, -100.0f);
 	PVRTVec2 maxCorner( 100.0f,  100.0f);
@@ -522,10 +467,11 @@ void DrawLoadDemo::RenderFloor(PVRTMat4& testMatrix)
 	// Draw the quad
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    // Safely disable the vertex attribute arrays
-    glDisableVertexAttribArray(VERTEX_ARRAY);
-    glDisableVertexAttribArray(NORMAL_ARRAY);
+		// Safely disable the vertex attribute arrays
+	glDisableVertexAttribArray(VERTEX_ARRAY);
+	glDisableVertexAttribArray(NORMAL_ARRAY);	
 }
+
 
 /*!****************************************************************************
  @Function		RenderParticles
@@ -548,7 +494,6 @@ void DrawLoadDemo::RenderParticles()
 		PVRTMat4 mModelView = m_mView * mModel;
 		PVRTMat4 mModelViewProj = m_mProjection * mModelView;
 		PVRTMat3 mModelViewIT(mModelView.inverse().transpose());
-        
 		glUniformMatrix4fv(m_SimpleShaderProgram.iModelViewProjectionMatrixLoc, 1, GL_FALSE, mModelViewProj.f);
 		glUniformMatrix4fv(m_SimpleShaderProgram.iModelViewMatrixLoc, 1, GL_FALSE, mModelView.f);
 		glUniformMatrix3fv(m_SimpleShaderProgram.iModelViewITMatrixLoc, 1, GL_FALSE, mModelViewIT.f);
@@ -561,8 +506,8 @@ void DrawLoadDemo::RenderParticles()
 		Mesh* pMesh = pPart->pMesh;
 
 		// Enable vertex arributes
-        glEnableVertexAttribArray(VERTEX_ARRAY);
-        glEnableVertexAttribArray(NORMAL_ARRAY);
+		glEnableVertexAttribArray(VERTEX_ARRAY);
+		glEnableVertexAttribArray(NORMAL_ARRAY);
 
 		glBindBuffer(GL_ARRAY_BUFFER, pMesh->vtxBuff);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMesh->idxBuff);
@@ -575,8 +520,8 @@ void DrawLoadDemo::RenderParticles()
 		glDrawElements(GL_TRIANGLES, pSPODMesh->nNumFaces*3, GL_UNSIGNED_SHORT, 0);
 
 		// Safely disable the vertex attribute arrays
-        glDisableVertexAttribArray(VERTEX_ARRAY);
-        glDisableVertexAttribArray(NORMAL_ARRAY);
+		glDisableVertexAttribArray(VERTEX_ARRAY);
+		glDisableVertexAttribArray(NORMAL_ARRAY);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -614,6 +559,7 @@ void DrawLoadDemo::UpdateParticles()
 	m_pParticleSystem->SetEmitter(sEmitter);
 	m_pParticleSystem->Update(step);
 }
+
 
 /*!****************************************************************************
  @Function		HandleInput
