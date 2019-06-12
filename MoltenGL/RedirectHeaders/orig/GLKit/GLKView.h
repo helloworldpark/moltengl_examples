@@ -10,14 +10,18 @@
 /** Define GLKView and other components in terms of platform-based components. */
 #if MLN_IOS
 #	import <UIKit/UIKit.h>
+#	define PlatformGLKView	GLKView
 #	define PlatformView		UIView
 #	define PlatformImage	UIImage
 #endif	// MLN_IOS
 #if MLN_MACOS
 #	import <AppKit/AppKit.h>
+#	define PlatformGLKView	MGLGLKView
 #	define PlatformView		NSView
 #	define PlatformImage	NSImage
 #endif	// MLN_IOS
+
+#import <OpenGLES/EAGL.h>
 
 
 NS_ASSUME_NONNULL_BEGIN
@@ -67,7 +71,7 @@ typedef NS_ENUM(GLint, GLKViewDrawableMultisample)
 #pragma mark -
 
 NS_CLASS_AVAILABLE(10_10, 5_0)
-@interface GLKView : PlatformView <NSCoding>
+@interface PlatformGLKView : PlatformView <NSCoding>
 {
 
 }
@@ -133,7 +137,7 @@ NS_CLASS_AVAILABLE(10_10, 5_0)
  Required method for implementing GLKViewDelegate. This draw method variant should be used when not subclassing GLKView.
  This method will not be called if the GLKView object has been subclassed and implements -(void)drawRect:(CGRect)rect.
  */
-- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect;
+- (void)glkView:(PlatformGLKView *)view drawInRect:(CGRect)rect;
 
 @end
 NS_ASSUME_NONNULL_END

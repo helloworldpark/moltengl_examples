@@ -41,8 +41,8 @@ extern "C" {
  * builds for the same nominal version.
  */
 #define MLN_VERSION_MAJOR   0
-#define MLN_VERSION_MINOR   23
-#define MLN_VERSION_PATCH   2
+#define MLN_VERSION_MINOR   24
+#define MLN_VERSION_PATCH   0
 #define MLN_VERSION_BUILD   1
 #define MLN_VERSION         MLN_MAKE_VERSION(MLN_VERSION_MAJOR, MLN_VERSION_MINOR, MLN_VERSION_PATCH, MLN_VERSION_BUILD)
 

@@ -18,7 +18,7 @@
 #import <MoltenGL/mglEnv.h>
 #import "../../orig/GLKit/GLKView.h"
 
-
+#if MLN_IOS
 /**
  * MGLGLKView overrides the functionality of GLKView, using Metal.
  *
@@ -29,10 +29,12 @@
 MLN_PUBLIC_SYMBOL @interface MGLGLKView : GLKView
 @end
 
+#endif	// MLN_IOS
+
 /**
  * In any files that import this header file, redefine all references to GLKView as MGLGLKView instead.
  * This is done after class definition to allow MGLGLView to subclass native GLKView.
  */
-#if (MGL_SUPPORT_OPENGL_ON_METAL || MLN_MACOS)
+#if (MGL_SUPPORT_OPENGL_ON_METAL)
 #	define GLKView		MGLGLKView
 #endif

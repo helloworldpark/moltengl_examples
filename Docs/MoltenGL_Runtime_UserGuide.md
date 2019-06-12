@@ -421,6 +421,7 @@ EXT_debug_marker
 EXT_discard_framebuffer
 EXT_pvrtc_sRGB
 EXT_read_format_bgra
+EXT_shader_texture_lod
 EXT_shadow_samplers
 EXT_sRGB
 EXT_texture_filter_anisotropic

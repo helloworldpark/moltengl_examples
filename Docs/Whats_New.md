@@ -11,6 +11,20 @@ For best results, use a Markdown reader.*
 
 
 
+MoltenGL 0.24.0
+---------------
+
+Released 2019/06/04
+
+- Support `EXT_shader_texture_lod` extension.
+- Fix issue where reduced viewport was not accepted.
+- Fix occasional corruption of uniforms after `glFlush()`, `glFinish()`, or `glReadPixels()`.
+- `EAGLContext::presentRenderbuffer:` presents the currently bound renderbuffer, 
+  instead of the renderbuffer of the currently bound framebuffer.
+- Fix problems running Demo apps on macOS.
+
+
+
 MoltenGL 0.23.2
 ---------------
 
